@@ -1,0 +1,402 @@
+openapi: 3.0.3
+info:
+  title: Multi-Tenant Event Tracking API
+  description: 管理與 SDK 事件追蹤系統的 API 文件
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+    description: Production server
+
+tags:
+  - name: App Management
+  - name: Platform Management
+  - name: Event Definition
+  - name: Field Definition
+  - name: Session
+  - name: Event Transmission
+  - name: Tenant Management
+  - name: Analytics
+  - name: Health
+
+paths:
+  /admin/apps:
+    post:
+      tags: [App Management]
+      summary: 建立 App
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                app_key:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+              required: [app_key, name]
+      responses:
+        "201":
+          description: Created
+    get:
+      tags: [App Management]
+      summary: 查詢所有 App
+      responses:
+        "200":
+          description: App 列表
+
+  /admin/apps/{app_key}:
+    get:
+      tags: [App Management]
+      summary: 查詢 App 詳細
+      parameters:
+        - name: app_key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: App 資料
+
+  /admin/apps/{app_key}/platforms:
+    post:
+      tags: [Platform Management]
+      summary: 建立平台
+      parameters:
+        - name: app_key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                name:
+                  type: string
+              required: [code, name]
+      responses:
+        "201":
+          description: 平台建立成功
+    get:
+      tags: [Platform Management]
+      summary: 查詢平台清單
+      parameters:
+        - name: app_key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 平台列表
+
+  /admin/platforms/{platform_code}/events:
+    post:
+      tags: [Event Definition]
+      summary: 建立事件定義
+      parameters:
+        - name: platform_code
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                name:
+                  type: string
+              required: [code, name]
+      responses:
+        "201":
+          description: 事件建立成功
+
+  /admin/events/{event_id}/fields:
+    post:
+      tags: [Field Definition]
+      summary: 新增事件欄位
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                field_key:
+                  type: string
+                field_type:
+                  type: string
+              required: [field_key, field_type]
+      responses:
+        "201":
+          description: 欄位新增成功
+    get:
+      tags: [Field Definition]
+      summary: 查詢事件欄位
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 欄位列表
+
+  /sdk/{app_key}/{platform_code}/events:
+    get:
+      tags: [Event Definition]
+      summary: 查詢事件清單
+      parameters:
+        - name: app_key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: platform_code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 事件列表
+
+  /sdk/init-session:
+    post:
+      tags: [Session]
+      summary: 初始化 Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+              required: [user_id]
+      responses:
+        "200":
+          description: Session 建立成功
+
+  /sdk/events:
+    post:
+      tags: [Event Transmission]
+      summary: 傳送事件資料
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session_id:
+                  type: string
+                event_code:
+                  type: string
+                fields:
+                  type: object
+              required: [session_id, event_code, fields]
+      responses:
+        "200":
+          description: 事件接收成功
+
+  /admin/tenants:
+    post:
+      tags: [Tenant Management]
+      summary: 建立租戶
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required: [name]
+      responses:
+        "201":
+          description: 租戶建立成功
+    get:
+      tags: [Tenant Management]
+      summary: 查詢租戶清單
+      responses:
+        "200":
+          description: 租戶清單
+
+  /admin/tenants/{tenant_id}:
+    get:
+      tags: [Tenant Management]
+      summary: 查詢租戶詳情
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 租戶詳情
+
+  /admin/apps/{app_key}/events/statistics:
+    get:
+      tags: [Analytics]
+      summary: 查詢事件統計
+      parameters:
+        - name: app_key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 統計資料
+
+  /admin/apps/{app_key}/events/logs:
+    get:
+      tags: [Analytics]
+      summary: 查詢事件資料
+      parameters:
+        - name: app_key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 事件資料
+
+  /healthz:
+    get:
+      tags: [Health]
+      summary: 系統狀態檢查
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    App:
+      type: object
+      properties:
+        app_key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+
+    Platform:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+
+    Event:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+
+    EventField:
+      type: object
+      properties:
+        field_key:
+          type: string
+        field_type:
+          type: string
+
+    Session:
+      type: object
+      properties:
+        user_id:
+          type: string
+        session_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    EventPayload:
+      type: object
+      properties:
+        session_id:
+          type: string
+        event_code:
+          type: string
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+
+    Tenant:
+      type: object
+      properties:
+        name:
+          type: string
+        tenant_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    AnalyticsRequest:
+      type: object
+      properties:
+        app_key:
+          type: string
+        event_code:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    AnalyticsResponse:
+      type: object
+      properties:
+        event_code:
+          type: string
+        total_count:
+          type: integer
+        average_count:
+          type: number
+          format: float
+        max_count:
+          type: integer
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        uptime:
+          type: string
+          format: date-time
