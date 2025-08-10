@@ -11,87 +11,109 @@
 ---
 
 ```sql
+CREATE SCHEMA tracking;
+
 -- 租戶資訊
-CREATE TABLE tenants (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+CREATE TABLE tracking.tenants (
+    id VARCHAR PRIMARY KEY,
     name TEXT NOT NULL UNIQUE, -- 租戶名稱（如公司名稱）
     description TEXT, -- 租戶描述
     created_at TIMESTAMP NOT NULL DEFAULT now(), -- 建立時間
     updated_at TIMESTAMP NOT NULL DEFAULT now(), -- 更新時間
+    deleted_at TIMESTAMP,
     CONSTRAINT tenant_name_unique UNIQUE (name) -- 確保每個租戶的名稱唯一
 );
 
-COMMENT ON COLUMN tenants.name IS '租戶名稱（如公司名稱）';
-COMMENT ON COLUMN tenants.description IS '租戶描述';
-COMMENT ON COLUMN tenants.created_at IS '租戶創建的時間戳';
-COMMENT ON COLUMN tenants.updated_at IS '租戶最後一次更新的時間戳';
+COMMENT ON COLUMN tracking.tracking.tenants.name IS '租戶名稱（如公司名稱）';
+COMMENT ON COLUMN tracking.tenants.description IS '租戶描述';
+COMMENT ON COLUMN tracking.tenants.created_at IS '租戶創建的時間戳';
+COMMENT ON COLUMN tracking.tenants.updated_at IS '租戶最後一次更新的時間戳';
 
-CREATE UNIQUE INDEX idx_tenants_name ON tenants (name);
+CREATE UNIQUE INDEX idx_tenants_name ON tracking.tenants (name);
 
 
 -- 應用程式註冊資訊
-CREATE TABLE applications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE, -- 租戶 ID
+CREATE TABLE tracking.applications (
+    id VARCHAR PRIMARY KEY,
+    tenant_id VARCHAR NOT NULL REFERENCES tracking.tenants(id) ON DELETE CASCADE, -- 租戶 ID
     name TEXT NOT NULL, -- 應用程式名稱
-    api_key TEXT UNIQUE NOT NULL, -- 應用程式的 API 密鑰
     description TEXT, -- 應用程式描述
     created_at TIMESTAMP NOT NULL DEFAULT now(), -- 應用程式創建時間
     updated_at TIMESTAMP NOT NULL DEFAULT now(), -- 應用程式更新時間
-    CONSTRAINT tenant_app_name_unique UNIQUE (tenant_id, name) -- 確保每個租戶中的應用程式名稱唯一
+    deleted_at TIMESTAMP
 );
 
-COMMENT ON COLUMN applications.tenant_id IS '關聯的租戶 ID';
-COMMENT ON COLUMN applications.name IS '應用程式名稱';
-COMMENT ON COLUMN applications.api_key IS '應用程式的 API 密鑰';
-COMMENT ON COLUMN applications.description IS '應用程式描述';
-COMMENT ON COLUMN applications.created_at IS '應用程式創建時間';
-COMMENT ON COLUMN applications.updated_at IS '應用程式更新時間';
+COMMENT ON COLUMN tracking.applications.tenant_id IS '關聯的租戶 ID';
+COMMENT ON COLUMN tracking.applications.name IS '應用程式名稱';
+COMMENT ON COLUMN tracking.applications.description IS '應用程式描述';
+COMMENT ON COLUMN tracking.applications.created_at IS '應用程式創建時間';
+COMMENT ON COLUMN tracking.applications.updated_at IS '應用程式更新時間';
 
-CREATE UNIQUE INDEX idx_applications_tenant_id_name ON applications (tenant_id, name);
-CREATE UNIQUE INDEX idx_applications_api_key ON applications (api_key);
+CREATE UNIQUE INDEX idx_applications_tenant_id_name ON tracking.applications (tenant_id, name);
+CREATE UNIQUE INDEX idx_applications_api_key ON tracking.applications (api_key);
+
+-- 應用程式API 密鑰
+CREATE TABLE tracking.applications_api_keys (
+    id VARCHAR PRIMARY KEY,
+    application_id UUID REFERENCES tracking.applications(id) ON DELETE CASCADE, -- 關聯的應用程式 ID
+    api_key VARCHAR NOT NULL UNIQUE, -- 應用程式的 API 密鑰
+    created_at TIMESTAMP NOT NULL DEFAULT now() -- 應用程式創建時間
+    updated_at TIMESTAMP NOT NULL DEFAULT now() -- 應用程式更新時間
+    deleted_at TIMESTAMP
+);
+
+COMMENT ON COLUMN tracking.applications_api_keys.application_id IS '關聯的應用程式 ID';
+COMMENT ON COLUMN tracking.applications_api_keys.api_key IS '應用程式的 API 密鑰';
+COMMENT ON COLUMN tracking.applications_api_keys.created_at IS '應用程式創建時間';
+COMMENT ON COLUMN tracking.applications_api_keys.updated_at IS '應用程式更新時間';
+COMMENT ON COLUMN tracking.applications_api_keys.deleted_at IS '應用程式刪除時間';
+
+CREATE UNIQUE INDEX idx_applications_api_keys_api_key ON tracking.applications_api_keys (api_key);
 
 -- 支援的平台種類
-CREATE TABLE platforms (
+CREATE TABLE tracking.platforms (
     id SERIAL PRIMARY KEY, -- 平台 ID
     name TEXT NOT NULL UNIQUE, -- 平台名稱
-    created_at TIMESTAMP NOT NULL DEFAULT now() -- 創建時間
+    created_at TIMESTAMP NOT NULL DEFAULT now(), -- 應用程式創建時間
+    updated_at TIMESTAMP NOT NULL DEFAULT now(), -- 應用程式更新時間
+    deleted_at TIMESTAMP
 );
 
-COMMENT ON COLUMN platforms.name IS '平台名稱（如 Web, iOS, Android）';
-COMMENT ON COLUMN platforms.created_at IS '平台創建時間';
+COMMENT ON COLUMN tracking.platforms.name IS '平台名稱（如 Web, iOS, Android）';
+COMMENT ON COLUMN tracking.platforms.created_at IS '平台創建時間';
 
-CREATE UNIQUE INDEX idx_platforms_name ON platforms (name);
+CREATE UNIQUE INDEX idx_platforms_name ON tracking.platforms (name);
 
 
 -- 定義事件類型
-CREATE TABLE events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE, -- 關聯的應用程式 ID
-    platform_id INTEGER REFERENCES platforms(id), -- 關聯的平台 ID
+CREATE TABLE tracking.events (
+    id VARCHAR PRIMARY KEY,
+    application_id VARCHAR NOT NULL REFERENCES tracking.applications(id) ON DELETE CASCADE, -- 關聯的應用程式 ID
+    platform_id INTEGER REFERENCES tracking.platforms(id), -- 關聯的平台 ID
     name TEXT NOT NULL, -- 事件名稱
     description TEXT, -- 事件描述
     is_active BOOLEAN DEFAULT TRUE, -- 事件是否啟用
-    created_at TIMESTAMP NOT NULL DEFAULT now(), -- 事件創建時間
-    updated_at TIMESTAMP NOT NULL DEFAULT now(), -- 事件更新時間
+    created_at TIMESTAMP NOT NULL DEFAULT now(), -- 應用程式創建時間
+    updated_at TIMESTAMP NOT NULL DEFAULT now(), -- 應用程式更新時間
+    deleted_at TIMESTAMP,
     CONSTRAINT app_event_name_unique UNIQUE (application_id, name) -- 確保每個應用程式內的事件名稱唯一
 );
 
-COMMENT ON COLUMN events.application_id IS '關聯的應用程式 ID';
-COMMENT ON COLUMN events.platform_id IS '關聯的平台 ID';
-COMMENT ON COLUMN events.name IS '事件名稱';
-COMMENT ON COLUMN events.description IS '事件描述';
-COMMENT ON COLUMN events.is_active IS '事件是否啟用';
-COMMENT ON COLUMN events.created_at IS '事件創建時間';
-COMMENT ON COLUMN events.updated_at IS '事件更新時間';
+COMMENT ON COLUMN tracking.events.application_id IS '關聯的應用程式 ID';
+COMMENT ON COLUMN tracking.events.platform_id IS '關聯的平台 ID';
+COMMENT ON COLUMN tracking.events.name IS '事件名稱';
+COMMENT ON COLUMN tracking.events.description IS '事件描述';
+COMMENT ON COLUMN tracking.events.is_active IS '事件是否啟用';
+COMMENT ON COLUMN tracking.events.created_at IS '事件創建時間';
+COMMENT ON COLUMN tracking.events.updated_at IS '事件更新時間';
 
-CREATE UNIQUE INDEX idx_events_application_id_name ON events (application_id, name);
-CREATE INDEX idx_events_platform_id ON events (platform_id);
+CREATE UNIQUE INDEX idx_events_application_id_name ON tracking.events (application_id, name);
+CREATE INDEX idx_events_platform_id ON tracking.events (platform_id);
 
 -- 每個事件定義其欄位與資料型別（僅 schema 定義）
-CREATE TABLE event_fields (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE, -- 關聯的事件 ID
+CREATE TABLE tracking.event_fields (
+    id VARCHAR PRIMARY KEY,
+    event_id VARCHAR NOT NULL REFERENCES tracking.events(id) ON DELETE CASCADE, -- 關聯的事件 ID
     name TEXT NOT NULL, -- 欄位名稱
     data_type TEXT NOT NULL CHECK (data_type IN ('string', 'int', 'float', 'boolean', 'datetime', 'json')), -- 資料型別
     is_required BOOLEAN DEFAULT FALSE, -- 欄位是否為必填
@@ -100,20 +122,20 @@ CREATE TABLE event_fields (
     CONSTRAINT event_field_unique UNIQUE (event_id, name) -- 確保每個事件中的欄位名稱唯一
 );
 
-COMMENT ON COLUMN event_fields.event_id IS '關聯的事件 ID';
-COMMENT ON COLUMN event_fields.name IS '欄位名稱';
-COMMENT ON COLUMN event_fields.data_type IS '資料型別';
-COMMENT ON COLUMN event_fields.is_required IS '是否為必填欄位';
-COMMENT ON COLUMN event_fields.description IS '欄位描述';
-COMMENT ON COLUMN event_fields.created_at IS '欄位創建時間';
+COMMENT ON COLUMN tracking.event_fields.event_id IS '關聯的事件 ID';
+COMMENT ON COLUMN tracking.event_fields.name IS '欄位名稱';
+COMMENT ON COLUMN tracking.event_fields.data_type IS '資料型別';
+COMMENT ON COLUMN tracking.event_fields.is_required IS '是否為必填欄位';
+COMMENT ON COLUMN tracking.event_fields.description IS '欄位描述';
+COMMENT ON COLUMN tracking.event_fields.created_at IS '欄位創建時間';
 
-CREATE UNIQUE INDEX idx_event_fields_event_id_name ON event_fields (event_id, name);
+CREATE UNIQUE INDEX idx_event_fields_event_id_name ON tracking.event_fields (event_id, name);
 
 -- Session，可由 SDK 初始化時建立，與匿名訪客或 user_id 綁定
-CREATE TABLE sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE, -- 關聯的應用程式 ID
-    platform_id INTEGER NOT NULL REFERENCES platforms(id), -- 關聯的平台 ID
+CREATE TABLE tracking.sessions (
+    id VARCHAR PRIMARY KEY,
+    application_id VARCHAR NOT NULL REFERENCES tracking.applications(id) ON DELETE CASCADE, -- 關聯的應用程式 ID
+    platform_id INTEGER NOT NULL REFERENCES tracking.platforms(id), -- 關聯的平台 ID
     session_key TEXT NOT NULL UNIQUE, -- Session 唯一鍵
     user_id TEXT, -- 使用者 ID（可選）
     user_agent TEXT, -- 使用者代理（瀏覽器 / 設備型號）
@@ -123,47 +145,106 @@ CREATE TABLE sessions (
     created_at TIMESTAMP NOT NULL DEFAULT now() -- Session 創建時間
 );
 
-COMMENT ON COLUMN sessions.application_id IS '關聯的應用程式 ID';
-COMMENT ON COLUMN sessions.platform_id IS '關聯的平台 ID';
-COMMENT ON COLUMN sessions.session_key IS 'Session 唯一鍵';
-COMMENT ON COLUMN sessions.user_id IS '使用者 ID（匿名或登入帳號 ID）';
-COMMENT ON COLUMN sessions.user_agent IS '使用者代理';
-COMMENT ON COLUMN sessions.ip_address IS '使用者 IP 地址';
-COMMENT ON COLUMN sessions.started_at IS 'Session 開始時間';
-COMMENT ON COLUMN sessions.ended_at IS 'Session 結束時間';
-COMMENT ON COLUMN sessions.created_at IS 'Session 創建時間';
+COMMENT ON COLUMN tracking.sessions.application_id IS '關聯的應用程式 ID';
+COMMENT ON COLUMN tracking.sessions.platform_id IS '關聯的平台 ID';
+COMMENT ON COLUMN tracking.sessions.session_key IS 'Session 唯一鍵';
+COMMENT ON COLUMN tracking.sessions.user_id IS '使用者 ID（匿名或登入帳號 ID）';
+COMMENT ON COLUMN tracking.sessions.user_agent IS '使用者代理';
+COMMENT ON COLUMN tracking.sessions.ip_address IS '使用者 IP 地址';
+COMMENT ON COLUMN tracking.sessions.started_at IS 'Session 開始時間';
+COMMENT ON COLUMN tracking.sessions.ended_at IS 'Session 結束時間';
+COMMENT ON COLUMN tracking.sessions.created_at IS 'Session 創建時間';
 
-CREATE UNIQUE INDEX idx_sessions_session_key ON sessions (session_key);
-CREATE INDEX idx_sessions_application_id_user_id ON sessions (application_id, user_id);
+CREATE UNIQUE INDEX idx_sessions_session_key ON tracking.sessions (session_key);
+CREATE INDEX idx_sessions_application_id_user_id ON tracking.sessions (application_id, user_id);
 
 -- 實際事件記錄（僅紀錄主幹，欄位資料寫入 Kafka → ClickHouse）
-CREATE TABLE event_logs (
-    id UUID, -- 記錄唯一ID
-    application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE, -- 關聯的應用程式 ID
-    session_id UUID REFERENCES sessions(id) ON DELETE SET NULL, -- 關聯的 Session ID
-    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE, -- 關聯的事件 ID
-    platform_id INTEGER NOT NULL REFERENCES platforms(id), -- 關聯的平台 ID
+CREATE TABLE tracking.event_logs (
+    id VARCHAR, -- 記錄唯一ID
+    application_id VARCHAR NOT NULL REFERENCES tracking.applications(id) ON DELETE CASCADE, -- 關聯的應用程式 ID
+    session_id VARCHAR REFERENCES tracking.sessions(id) ON DELETE SET NULL, -- 關聯的 Session ID
+    event_id VARCHAR NOT NULL REFERENCES tracking.events(id) ON DELETE CASCADE, -- 關聯的事件 ID
+    platform_id INTEGER NOT NULL REFERENCES tracking.platforms(id), -- 關聯的平台 ID
     created_at TIMESTAMP NOT NULL DEFAULT now(), -- 記錄創建時間
     properties JSONB, -- 備援記錄（補充欄位資料）
-    indexed BOOLEAN DEFAULT FALSE, -- 是否已經建立索引
 
     CONSTRAINT event_logs_pk PRIMARY KEY (id, created_at), -- 主鍵需要包含分區鍵
     CONSTRAINT event_logs_created_at CHECK (created_at <= now()) -- 防止未來日期插入
 )
 PARTITION BY RANGE (created_at); -- 按照 created_at 欄位的範圍進行分區
 
-COMMENT ON COLUMN event_logs.application_id IS '關聯的應用程式 ID';
-COMMENT ON COLUMN event_logs.session_id IS '關聯的 Session ID';
-COMMENT ON COLUMN event_logs.event_id IS '關聯的事件 ID';
-COMMENT ON COLUMN event_logs.platform_id IS '關聯的平台 ID';
-COMMENT ON COLUMN event_logs.created_at IS '記錄創建時間';
-COMMENT ON COLUMN event_logs.properties IS '事件的備援記錄';
-COMMENT ON COLUMN event_logs.indexed IS '是否已經建立索引';
+COMMENT ON COLUMN tracking.event_logs.application_id IS '關聯的應用程式 ID';
+COMMENT ON COLUMN tracking.event_logs.session_id IS '關聯的 Session ID';
+COMMENT ON COLUMN tracking.event_logs.event_id IS '關聯的事件 ID';
+COMMENT ON COLUMN tracking.event_logs.platform_id IS '關聯的平台 ID';
+COMMENT ON COLUMN tracking.event_logs.created_at IS '記錄創建時間';
+COMMENT ON COLUMN tracking.event_logs.properties IS '事件的備援記錄';
+COMMENT ON COLUMN tracking.event_logs.indexed IS '是否已經建立索引';
 
-CREATE INDEX idx_event_logs_application_id_created_at ON event_logs (application_id, created_at);
-CREATE INDEX idx_event_logs_session_id ON event_logs (session_id);
-CREATE INDEX idx_event_logs_event_id ON event_logs (event_id);
-CREATE INDEX idx_event_logs_platform_id ON event_logs (platform_id);
+CREATE INDEX idx_event_logs_application_id_created_at ON tracking.event_logs (application_id, created_at);
+CREATE INDEX idx_event_logs_session_id ON tracking.event_logs (session_id);
+CREATE INDEX idx_event_logs_event_id ON tracking.event_logs (event_id);
+CREATE INDEX idx_event_logs_platform_id ON tracking.event_logs (platform_id);
+
+CREATE TABLE tracking.event_logs_default PARTITION OF tracking.event_logs DEFAULT;
+```
+
+#### ERD 圖
+
+```mermaid
+erDiagram
+    tenants ||--o{ applications : "has"
+    applications ||--o{ events : "has"
+    applications ||--o{ sessions : "has"
+    applications ||--o{ event_logs : "has"
+
+    platforms ||--o{ events : "used by"
+    platforms ||--o{ sessions : "used by"
+    platforms ||--o{ event_logs : "used by"
+
+    events ||--o{ event_fields : "has"
+    events ||--o{ event_logs : "logged in"
+
+    sessions ||--o{ event_logs : "has"
+
+    tenants {
+        VARCHAR id PK
+    }
+
+    applications {
+        VARCHAR id PK
+        VARCHAR tenant_id FK
+    }
+
+    events {
+        VARCHAR id PK
+        VARCHAR application_id FK
+        INTEGER platform_id FK
+    }
+
+    event_fields {
+        VARCHAR id PK
+        VARCHAR event_id FK
+    }
+
+    sessions {
+        VARCHAR id PK
+        VARCHAR application_id FK
+        INTEGER platform_id FK
+    }
+
+    platforms {
+        SERIAL id PK
+    }
+
+    event_logs {
+        VARCHAR id PK
+        TIMESTAMP created_at PK
+        VARCHAR application_id FK
+        VARCHAR session_id FK
+        VARCHAR event_id FK
+        INTEGER platform_id FK
+    }
 
 ```
 
@@ -192,7 +273,7 @@ CREATE INDEX idx_event_logs_platform_id ON event_logs (platform_id);
 
 ```sql
 CREATE TABLE tenants (
-    id UUID DEFAULT generateUUIDv4(),
+    id VARCHAR,
     name String,
     description String,
     created_at DateTime DEFAULT now(),
@@ -210,7 +291,7 @@ CREATE INDEX idx_tenants_name ON tenants (name) TYPE minmax GRANULARITY 4;
 
 ```sql
 CREATE TABLE applications (
-    id UUID DEFAULT generateUUIDv4(),
+    id VARCHAR,
     tenant_id UUID,
     name String,
     api_key String,
@@ -248,7 +329,7 @@ CREATE INDEX idx_platforms_tenant_id_name ON platforms (tenant_id, name) TYPE mi
 
 ```sql
 CREATE TABLE events (
-    id UUID DEFAULT generateUUIDv4(),
+    id VARCHAR,
     tenant_id UUID,
     application_id UUID,
     platform_id UInt32,
@@ -271,7 +352,7 @@ CREATE INDEX idx_events_platform_id ON events (platform_id) TYPE minmax GRANULAR
 
 ```sql
 CREATE TABLE event_fields (
-    id UUID DEFAULT generateUUIDv4(),
+    id VARCHAR,
     tenant_id UUID,
     event_id UUID,
     name String,
@@ -292,7 +373,7 @@ CREATE INDEX idx_event_fields_tenant_id_event_id_name ON event_fields (tenant_id
 
 ```sql
 CREATE TABLE sessions (
-    id UUID DEFAULT generateUUIDv4(),
+    id VARCHAR,
     tenant_id UUID,
     application_id UUID,
     platform_id UInt32,
@@ -317,15 +398,14 @@ CREATE INDEX idx_sessions_session_key ON sessions (session_key) TYPE minmax GRAN
 
 ```sql
 CREATE TABLE event_logs (
-    id UUID DEFAULT generateUUIDv4(),
+    id VARCHAR,
     tenant_id UUID,
     application_id UUID,
     session_id UUID,
     event_id UUID,
     platform_id UInt32,
     created_at DateTime DEFAULT now(),
-    properties JSONB,
-    indexed UInt8 DEFAULT 0
+    properties Map(string, string),
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(created_at)
 ORDER BY (tenant_id, application_id, event_id, created_at)  -- 確保每個租戶的事件日誌能夠高效查詢
